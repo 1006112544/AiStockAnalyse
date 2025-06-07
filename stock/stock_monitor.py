@@ -60,14 +60,14 @@ class StockMonitor:
         self.range_frame.pack(side=tk.LEFT, padx=10)
         
         # 日K数据范围
-        self.daily_range_label = ttk.Label(self.range_frame, text="日K范围(年):")
+        self.daily_range_label = ttk.Label(self.range_frame, text="日K范围(月):")
         self.daily_range = ttk.Entry(self.range_frame, width=5)
-        self.daily_range.insert(0, "2")  # 默认2年
+        self.daily_range.insert(0, "24")  # 默认24个月
         
         # 周K数据范围
         self.weekly_range_label = ttk.Label(self.range_frame, text="周K范围(年):")
         self.weekly_range = ttk.Entry(self.range_frame, width=5)
-        self.weekly_range.insert(0, "10")  # 默认20年
+        self.weekly_range.insert(0, "10")  # 默认10年
         
         # 月K数据范围
         self.monthly_range_label = ttk.Label(self.range_frame, text="月K范围(年):")
@@ -150,12 +150,12 @@ class StockMonitor:
             
             # 获取日K数据
             try:
-                daily_years = int(self.daily_range.get())
-                if daily_years < 1:
-                    daily_years = 5  # 如果输入无效，使用默认值
+                daily_months = int(self.daily_range.get())
+                if daily_months < 1:
+                    daily_months = 24  # 如果输入无效，使用默认值
             except ValueError:
-                daily_years = 5
-            start_date = (datetime.now() - timedelta(days=daily_years*365)).strftime('%Y%m%d')
+                daily_months = 24
+            start_date = (datetime.now() - timedelta(days=daily_months*30)).strftime('%Y%m%d')
             future = self.fetch_data_async(ak.stock_zh_a_hist, 
                                          symbol=stock_code, 
                                          period="daily", 
@@ -168,9 +168,9 @@ class StockMonitor:
             try:
                 weekly_years = int(self.weekly_range.get())
                 if weekly_years < 1:
-                    weekly_years = 20  # 如果输入无效，使用默认值
+                    weekly_years = 10  # 如果输入无效，使用默认值
             except ValueError:
-                weekly_years = 20
+                weekly_years = 10
             start_date = (datetime.now() - timedelta(days=weekly_years*365)).strftime('%Y%m%d')
             future = self.fetch_data_async(ak.stock_zh_a_hist, 
                                          symbol=stock_code, 
@@ -493,6 +493,26 @@ class StockMonitor:
                 # 绘制成交量
                 self.ax2.bar(df[date_col].iloc[i], df[volume_col].iloc[i], 
                             color=color, width=0.6, label='成交量' if i == 0 else "")
+            
+            # 找出最高点和最低点
+            max_high = df[high_col].max()
+            min_low = df[low_col].min()
+            max_high_date = df[date_col][df[high_col] == max_high].iloc[0]
+            min_low_date = df[date_col][df[low_col] == min_low].iloc[0]
+            
+            # 在最高点添加标记
+            self.ax1.plot(max_high_date, max_high, 'r^', markersize=10, label='最高点')
+            self.ax1.annotate(f'最高: {max_high:.2f}', 
+                            xy=(max_high_date, max_high),
+                            xytext=(10, 10), textcoords='offset points',
+                            color='red', fontsize=8)
+            
+            # 在最低点添加标记
+            self.ax1.plot(min_low_date, min_low, 'gv', markersize=10, label='最低点')
+            self.ax1.annotate(f'最低: {min_low:.2f}', 
+                            xy=(min_low_date, min_low),
+                            xytext=(10, -15), textcoords='offset points',
+                            color='green', fontsize=8)
             
             if self.show_ma.get():
                 # 计算并绘制均线
